@@ -2,19 +2,29 @@ import { postImage } from './clients/at';
 import { getNextImage } from './images';
 import * as dotenv from 'dotenv';
 import { CronJob } from 'cron';
+import express from 'express'; // Import express
+
 dotenv.config();
 
-// EDIT THIS!
-function postTextFromImageName(imageName: string): string {
-  // Remove the file extension
-  const nameWithoutExtension = imageName.replace('.png', '');
+// Initialize Express
+const app = express();
+const port = process.env.PORT || 3000; // Use port from environment variables or default to 3000
 
-  // If the name has dashes, split it, otherwise set a default date
+// Middleware to handle JSON requests (if needed)
+app.use(express.json());
+
+// HTTP GET endpoint for checking the server status (ping endpoint)
+app.get('/', (req, res) => {
+  res.send('Bot is running!'); // Simple message to confirm the bot is live
+});
+
+// The original image caption logic
+function postTextFromImageName(imageName: string): string {
+  const nameWithoutExtension = imageName.replace('.png', '');
   let dateParts;
   if (nameWithoutExtension.includes('-')) {
     dateParts = nameWithoutExtension.split('-');
   } else {
-    // If there's no dash, use a default date (e.g., today)
     dateParts = [
       new Date().getFullYear().toString(),
       (new Date().getMonth() + 1).toString(),
@@ -22,23 +32,10 @@ function postTextFromImageName(imageName: string): string {
     ];
   }
 
-  console.log(dateParts);
   const date = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2] || 1));
-
-  // Create a formatter
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  // Format the date
-  console.log(date);
-  console.log(formatter.format(date));
-
+  const formatter = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   return formatter.format(date);
 }
-
 
 function imageCaption() {
   const sweetTexts = [
@@ -88,25 +85,16 @@ function imageCaption() {
   return sweetTexts[Math.floor(Math.random() * sweetTexts.length)];
 }
 
-// EDIT THIS!
 function altTextFromImageName(imageName: string): string {
   return 'Image from ' + postTextFromImageName(imageName);
 }
 
-// Shouldn't have to edit this.
 async function main() {
-  // const { LAST_IMAGE_NAME: lastImageName } = process.env;
-  // const nextImage = await getNextImage({ lastImageName });
-
-  // console.log(nextImage.imageName);
-
-  // await postImage({
-  //   path: nextImage.absolutePath,
-  //   text: imageCaption(),
-  //   altText: altTextFromImageName(nextImage.imageName),
-  // });
-
   scheduleJobs();
+  // Start the HTTP server
+  app.listen(port, () => {
+    console.log(`Bot is listening at http://localhost:${port}`);
+  });
 }
 
 const scheduleJobs = () => {
@@ -138,11 +126,8 @@ const scheduleJobs = () => {
     if (index === 0) {
       (async () => {
         console.log('Posting image immediately');
-
         const { LAST_IMAGE_NAME: lastImageName } = process.env;
         const nextImage = await getNextImage({ lastImageName });
-
-        //console.log(nextImage.imageName);
 
         await postImage({
           path: nextImage.absolutePath,
