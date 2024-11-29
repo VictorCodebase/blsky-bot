@@ -13,7 +13,6 @@ type NextImage = {
 };
 
 async function getNextImage(options?: GetNextImageOptions): Promise<NextImage> {
-  const { lastImageName } = options || {};
   const readdir = util.promisify(fs.readdir);
   const imagesDir = path.resolve(__dirname, '../../imagequeue');
   const imageFiles = (await readdir(imagesDir)).sort();
@@ -24,27 +23,14 @@ async function getNextImage(options?: GetNextImageOptions): Promise<NextImage> {
     throw new Error('No image files found in the directory.');
   }
 
-  let nextImageIndex = 0; // default value if no lastImageName provided, or it's not found
-  let loopedAround = false;
-
-  if (lastImageName) {
-    const lastImageIndex = validImageFiles.indexOf(lastImageName);
-    if (lastImageIndex >= 0) {
-      nextImageIndex = lastImageIndex + 1;
-      if (nextImageIndex >= validImageFiles.length) {
-        nextImageIndex = 0; // loop back to the first image if we've reached the end
-        loopedAround = true;
-      }
-    }
-  }
-
-  const imageName = validImageFiles[nextImageIndex];
+  const randomIndex = Math.floor(Math.random() * validImageFiles.length);
+  const imageName = validImageFiles[randomIndex];
   const absolutePath = path.join(imagesDir, imageName);
 
   return {
     imageName,
     absolutePath,
-    loopedAround,
+    loopedAround: false, // No looping logic needed for random selection
   };
 }
 
